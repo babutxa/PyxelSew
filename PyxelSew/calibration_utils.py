@@ -1,5 +1,9 @@
 import numpy as np
 
+def fromCartesianToCylindric(pCamera):
+    phi = np.atan2(pCamera[0], pCamera[2])
+    return np.array([phi, pCamera[1] / pCamera[2] * np.cos(phi)])
+
 def fromCylindricToCartesianNormalized(pCylindric):
     phi = pCylindric[0]
     h = pCylindric[1]
