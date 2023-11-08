@@ -89,43 +89,46 @@ class CameraModel:
     ### transformations ###
     #######################
 
-    def wordlPoint2Tex(self, pWorld):
-        pCamera = self._worldPoint2camera(pWorld) # 3D world -> 3D camera
-        pNorm = self._camera2Normalized(pCamera)
-        pTex = self._normalized2Tex(pNorm)
+    def wordlPoint_2_tex(self, pWorld):
+        bCamera = self._worldPoint_2_camera(pWorld) # 3D world -> 3D camera
+        pNorm = self._camera_2_normalized(bCamera)
+        pTex = self._normalized_2_tex(pNorm)
         return pTex
 
-    def worldBearing2Tex(self, bWorld):
-        bCamera = self._worldBearing2camera(bWorld)
-        pNorm = self._camera2Normalized(bCamera)
-        pTex = self._normalized2Tex(pNorm)
+    def worldBearing_2_tex(self, bWorld):
+        bCamera = self._worldBearing_2_camera(bWorld)
+        pNorm = self._camera_2_normalized(bCamera)
+        pTex = self._normalized_2_tex(pNorm)
         return pTex
 
-    def field2Tex(self, pField):
-        pCamera = self._worldPoint2camera([pField, 1])
-        pNorm = self._camera2Normalized(pCamera)
-        pTex = self._normalized2Tex(pNorm)
+    def field_2_tex(self, pField):
+        bCamera = self._worldPoint_2_camera([pField, 1])
+        pNorm = self._camera_2_normalized(bCamera)
+        pTex = self._normalized_2_tex(pNorm)
         return pTex
 
-    def tex2Wordl(self, pTex):
-        bCamera = self._tex2Camera(pTex)
-        bWorld = self._camera2World(bCamera)
+    def tex_2_wordlBearing(self, pTex):
+        bCamera = self._tex_2_camera(pTex)
+        bWorld = self._camera_2_world(bCamera)
         return bWorld
 
-    def tex2Field(self, pTex):
-        bCamera = self._tex2Camera(pTex)
-        pField = self._camera2Field(bCamera)
+    def tex_2_field(self, pTex):
+        bCamera = self._tex_2_camera(pTex)
+        pField = self._camera_2_field(bCamera)
         return pField
 
-    def worldPoint2worldBearing(self, pWorld):
+    def worldPoint_2_worldBearing(self, pWorld):
         return pWorld - self.getC()
 
 
     # internal stuff - do not use this _functions 
-    def _worldPoint2camera(self, pWorld):
+    def _worldPoint_2_camera(self, pWorld):
         return self.getR().dot(pWorld) + self.getT()
-    
-    def _camera2Normalized(self, pCamera):
+
+    def _worldBearing_2_camera(self, bWorld):
+        return self.getR().dot(bWorld)
+
+    def _camera_2_normalized(self, bCamera):
         # project and distort
         k1 = self.m_distortion[dParam.K1.value]
         k2 = self.m_distortion[dParam.K2.value]
@@ -136,19 +139,19 @@ class CameraModel:
 
         # perspective projection
         if self.m_projAndDistType == ProjectionDistortionType.perspectiveNone:
-            return np.array([pCamera[0] / pCamera[2], pCamera[1] / pCamera[2]])
+            return np.array([bCamera[0] / bCamera[2], bCamera[1] / bCamera[2]])
 
         # cylindric projection
         elif self.m_projAndDistType == ProjectionDistortionType.cylindricNone:
-            return cu.fromCartesianToCylindric(pCamera)
+            return cu.fromCartesianToCylindric(bCamera)
             
         # espheric projection
         elif self.m_projAndDistType == ProjectionDistortionType.esphericNone:
-            return cu.fromCartesianToEspheric(pCamera)
+            return cu.fromCartesianToEspheric(bCamera)
 
         # perspective projection + distortion
         elif self.m_projAndDistType == ProjectionDistortionType.perspectiveRadial:     
-            pNorm = np.array([pCamera[0] / pCamera[2], pCamera[1] / pCamera[2]])
+            pNorm = np.array([bCamera[0] / bCamera[2], bCamera[1] / bCamera[2]])
             r2 = pNorm @ pNorm
             if r2 > k4:
                 r2 = k4
@@ -161,8 +164,8 @@ class CameraModel:
 
         # fisheye projection + distortion
         elif self.m_projAndDistType == ProjectionDistortionType.fisheyeRadial:
-            r = np.sqrt(pCamera[0] * pCamera[0]  + pCamera[1]  * pCamera[1])
-            theta = np.atan2(r, pCamera[2])
+            r = np.sqrt(bCamera[0] * bCamera[0]  + bCamera[1]  * bCamera[1])
+            theta = np.atan2(r, bCamera[2])
             theta2 = theta * theta
             if(theta2 > p1):
                 theta2 = p1
@@ -172,20 +175,20 @@ class CameraModel:
             theta9 = theta7 * theta2
             theta_d = theta + k1 * theta3 + k2 * theta5 + k3 * theta7 + k4 * theta9
             cdist = theta_d / r if r > 1e-8 else 1
-            return np.array([cdist * pCamera[0], cdist * pCamera[1]])
+            return np.array([cdist * bCamera[0], cdist * bCamera[1]])
 
         return np.array([]) # error return - empty array
     
-    def _normalized2Tex(self, pNorm):
-        texP = self.getK() * np.array([pNorm[0], pNorm[1], 1.0])
+    def _normalized_2_tex(self, pNorm):
+        texP = self.getK().dot(np.array([pNorm[0], pNorm[1], 1.0]))
         return np.array([texP[0] / texP[2], texP[1] / texP[2]])
 
-    def _tex2Camera(self, pTex):
+    def _tex_2_camera(self, pTex):
         # note: this function returns a bearing in camera coordinates (bCamera)
 
         # perspective projection
         if self.m_projAndDistType == ProjectionDistortionType.perspectiveNone:
-            return self._tex2RawNorm(pTex)
+            return self._tex_2_rawNorm(pTex)
 
         # cylindric projection
         elif self.m_projAndDistType == ProjectionDistortionType.cylindricNone:
@@ -194,7 +197,7 @@ class CameraModel:
             
         # espheric projection
         elif self.m_projAndDistType == ProjectionDistortionType.esphericNone:
-            espheric = self._tex2RawNorm(pTex)
+            espheric = self._tex_2_rawNorm(pTex)
             return cu.fromEsphericToCartesianNormalized(espheric)
 
         # perspective projection + distortion (radial)
@@ -209,7 +212,10 @@ class CameraModel:
 
         return np.array([]) # error return - empty array
 
-    def _camera2Field(self, bCamera):
+    def _camera_2_world(self, bCamera):
+        return self.getR().inv().dot(bCamera)
+
+    def _camera_2_field(self, bCamera):
         t = self.getT()
         R = self.getR()
         homoField2NormUndist = np.zeros([3, 3])
@@ -219,9 +225,9 @@ class CameraModel:
         pField = homoNormUndist2Field.dot(bCamera)
         return np.array([pField[0] / pField[2], pField[1] / pField[2]])
 
-    def _tex2RawNorm(self, pTex):
+    def _tex_2_rawNorm(self, pTex):
         K = self.getK()
-        return K.inv() * np.array([pTex[0], pTex[1], 1.0])
+        return K.inv().dot(np.array([pTex[0], pTex[1], 1.0]))
 
     def _undistortPixelPointRadial(self, pTexDist):
         k1 = self.m_distortion[dParam.K1.value]

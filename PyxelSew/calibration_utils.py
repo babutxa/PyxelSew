@@ -15,7 +15,7 @@ def fromCartesianToEspheric(pCamera):
     phi = np.arcsin(pCamera[1] / r)
     return np.array([theta, phi])
 
-def fromEsphericTexToCartesianNormalized(pEspheric):
+def fromEsphericToCartesianNormalized(pEspheric):
     theta = pEspheric[0] # longitude
     phi = pEspheric[1]   # latitude
     x = np.cos(phi) * np.cos(theta); # -- > zCamera
