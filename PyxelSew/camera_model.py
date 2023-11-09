@@ -82,8 +82,7 @@ class CameraModel:
         R = self.getR()
         t = -R.dot(c)
         self.setT(t)  # already resets extrinsics dependent things
-   
-    
+
     
     #######################
     ### transformations ###
@@ -102,7 +101,9 @@ class CameraModel:
         return pTex
 
     def field_2_tex(self, pField):
-        bCamera = self._worldPoint_2_camera([pField, 1])
+        # use Homography to transform field to normalized undistorted coordinates
+        homoField2NormUndist = self._getHomoField2NormUndist()
+        bCamera = homoField2NormUndist.dot(np.array([pField[0], pField[1], 1.0]))
         pNorm = self._camera_2_normalized(bCamera)
         pTex = self._normalized_2_tex(pNorm)
         return pTex
@@ -192,7 +193,7 @@ class CameraModel:
 
         # cylindric projection
         elif self.m_projAndDistType == ProjectionDistortionType.cylindricNone:
-            cylindric = self._tex2RawNorm(pTex)
+            cylindric = self._tex_2_rawNorm(pTex)
             return cu.fromCylindricToCartesianNormalized(cylindric)
             
         # espheric projection
@@ -216,18 +217,13 @@ class CameraModel:
         return self.getR().inv().dot(bCamera)
 
     def _camera_2_field(self, bCamera):
-        t = self.getT()
-        R = self.getR()
-        homoField2NormUndist = np.zeros([3, 3])
-        homoField2NormUndist[:, 0:2] = R[:, 0:2]
-        homoField2NormUndist[:, -1] = t 
-        homoNormUndist2Field = np.linalg.inv(homoField2NormUndist)
+        homoNormUndist2Field = self._getHomoField2NormUndist().inv()
         pField = homoNormUndist2Field.dot(bCamera)
         return np.array([pField[0] / pField[2], pField[1] / pField[2]])
 
     def _tex_2_rawNorm(self, pTex):
-        K = self.getK()
-        return K.inv().dot(np.array([pTex[0], pTex[1], 1.0]))
+        Kinv = self.getK().inv()
+        return Kinv.dot(np.array([pTex[0], pTex[1], 1.0]))
 
     def _undistortPixelPointRadial(self, pTexDist):
         k1 = self.m_distortion[dParam.K1.value]
@@ -251,6 +247,11 @@ class CameraModel:
         distorted_points = np.array([[[pTexDist[0], pTexDist[1]]]])
         undistorted_points = cv2.fisheye.undistortPoints(distorted_points, self.getK(), distCoeffs, None, np.eye(3))
         return np.array([undistorted_points[0,0], undistorted_points[0,1]])
+    
+    def _getHomoField2NormUndist(self):
+        homoField2NormUndist = self.getR()
+        homoField2NormUndist[:, -1] = self.getT()
+        return homoField2NormUndist
 
     
 

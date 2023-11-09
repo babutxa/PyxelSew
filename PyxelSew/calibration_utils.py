@@ -22,4 +22,3 @@ def fromEsphericToCartesianNormalized(pEspheric):
     y = np.cos(phi) * np.sin(theta); # -- > xCamera
     z = np.sin(phi);              # -- > yCamera
     return np.array([y, z, x])
-
