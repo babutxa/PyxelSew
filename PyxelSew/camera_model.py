@@ -94,12 +94,14 @@ class CameraModel:
         pTex = self._normalized_2_tex(pNorm)
         return pTex
 
+    
     def worldBearing_2_tex(self, bWorld):
         bCamera = self._worldBearing_2_camera(bWorld)
         pNorm = self._camera_2_normalized(bCamera)
         pTex = self._normalized_2_tex(pNorm)
         return pTex
 
+    
     def field_2_tex(self, pField):
         # use Homography to transform field to normalized undistorted coordinates
         homoField2NormUndist = self._getHomoField2NormUndist()
@@ -108,28 +110,33 @@ class CameraModel:
         pTex = self._normalized_2_tex(pNorm)
         return pTex
 
+    
     def tex_2_wordlBearing(self, pTex):
         bCamera = self._tex_2_camera(pTex)
         bWorld = self._camera_2_world(bCamera)
         return bWorld
 
+    
     def tex_2_field(self, pTex):
         bCamera = self._tex_2_camera(pTex)
         pField = self._camera_2_field(bCamera)
         return pField
 
+    
     def worldPoint_2_worldBearing(self, pWorld):
         return pWorld - self.getC()
 
 
     # internal stuff - do not use this _functions 
-    def _worldPoint_2_camera(self, pWorld):
+    def __worldPoint_2_camera(self, pWorld):
         return self.getR().dot(pWorld) + self.getT()
 
-    def _worldBearing_2_camera(self, bWorld):
+    
+    def __worldBearing_2_camera(self, bWorld):
         return self.getR().dot(bWorld)
 
-    def _camera_2_normalized(self, bCamera):
+    
+    def __camera_2_normalized(self, bCamera):
         # project and distort
         k1 = self.m_distortion[dParam.K1.value]
         k2 = self.m_distortion[dParam.K2.value]
@@ -180,11 +187,13 @@ class CameraModel:
 
         return np.array([]) # error return - empty array
     
-    def _normalized_2_tex(self, pNorm):
+    
+    def __normalized_2_tex(self, pNorm):
         texP = self.getK().dot(np.array([pNorm[0], pNorm[1], 1.0]))
         return np.array([texP[0] / texP[2], texP[1] / texP[2]])
 
-    def _tex_2_camera(self, pTex):
+    
+    def __tex_2_camera(self, pTex):
         # note: this function returns a bearing in camera coordinates (bCamera)
 
         # perspective projection
@@ -213,42 +222,48 @@ class CameraModel:
 
         return np.array([]) # error return - empty array
 
-    def _camera_2_world(self, bCamera):
+
+    def __camera_2_world(self, bCamera):
         return self.getR().inv().dot(bCamera)
 
-    def _camera_2_field(self, bCamera):
+
+    def __camera_2_field(self, bCamera):
         homoNormUndist2Field = self._getHomoField2NormUndist().inv()
         pField = homoNormUndist2Field.dot(bCamera)
         return np.array([pField[0] / pField[2], pField[1] / pField[2]])
 
-    def _tex_2_rawNorm(self, pTex):
+
+    def __tex_2_rawNorm(self, pTex):
         Kinv = self.getK().inv()
         return Kinv.dot(np.array([pTex[0], pTex[1], 1.0]))
 
-    def _undistortPixelPointRadial(self, pTexDist):
+
+    def __undistortPixelPointRadial(self, pTexDist):
         k1 = self.m_distortion[dParam.K1.value]
         k2 = self.m_distortion[dParam.K2.value]
         p1 = self.m_distortion[dParam.P1.value]
         p2 = self.m_distortion[dParam.P2.value]
         k3 = self.m_distortion[dParam.K3.value]
         distCoeffs = np.array([k1, k2, p1,  p2, k3], dtype=np.float64)
-
         distorted_points = np.array([[[pTexDist[0], pTexDist[1]]]])
         undistorted_points = cv2.undistortPoints(distorted_points, self.getK(), distCoeffs, None, np.eye(3))
         return np.array([undistorted_points[0,0], undistorted_points[0,1]])
 
-    def _undistortPixelPointFisheye(self, pTexDist):
+
+    def __undistortPixelPointFisheye(self, pTexDist):
         k1 = self.m_distortion[dParam.K1.value]
         k2 = self.m_distortion[dParam.K2.value]
         k3 = self.m_distortion[dParam.K3.value]
         k4 = self.m_distortion[dParam.K4.value]
-        distCoeffs = np.array([k1, k2, k3, k4], dtype=np.float64)
-                
+        distCoeffs = np.array([k1, k2, k3, k4], dtype=np.float64)               
         distorted_points = np.array([[[pTexDist[0], pTexDist[1]]]])
         undistorted_points = cv2.fisheye.undistortPoints(distorted_points, self.getK(), distCoeffs, None, np.eye(3))
         return np.array([undistorted_points[0,0], undistorted_points[0,1]])
     
-    def _getHomoField2NormUndist(self):
+
+    def __getHomoField2NormUndist(self):
+        # Homography to transform field to normalized 'undistorted' coordinates.
+        # This homography is valid for all types of cameras, not only the pinhole ones.
         homoField2NormUndist = self.getR()
         homoField2NormUndist[:, -1] = self.getT()
         return homoField2NormUndist
