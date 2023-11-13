@@ -47,21 +47,21 @@ class CameraModel:
         self.m_projAndDistType = pd_type
 
     def getK(self, out_size=(1., 1.)):
-        fc = self.m_intrinsics(iParam.FC.value)
-        ar = self.m_intrinsics(iParam.AR.value)
-        cx = self.m_intrinsics(iParam.CX.value)
-        cy = self.m_intrinsics(iParam.CY.value)
-        sk = self.m_intrinsics(iParam.SKEW.value)
+        fc = self.m_intrinsics[iParam.FC.value]
+        ar = self.m_intrinsics[iParam.AR.value]
+        cx = self.m_intrinsics[iParam.CX.value]
+        cy = self.m_intrinsics[iParam.CY.value]
+        sk = self.m_intrinsics[iParam.SKEW.value]
         width = out_size[0]
         height = out_size[1]    
         return np.array([[fc * width, sk, cx * width],
-                         [0, fc * ar * height, cy * height],
-                         [0, 0, 1]])
+                         [0.0, fc * ar * height, cy * height],
+                         [0.0, 0.0, 1.0]])
     
     def getR(self):
-        pan = self.m_intrinsics[iParam.PAN.value]
-        tilt = self.m_intrinsics[iParam.TILT.value]
-        roll = self.m_intrinsics[iParam.ROLL.value]
+        pan = self.m_intrinsics[eParam.PAN.value]
+        tilt = self.m_intrinsics[eParam.TILT.value]
+        roll = self.m_intrinsics[eParam.ROLL.value]
         Rpan = cv2.Rodrigues(np.array([0., 0., pan * math.pi / 180.]))[0]  # Pan around Z-axis
         Rtilt = cv2.Rodrigues(np.array([tilt * math.pi / 180, 0., 0.]))[0]  # Tilt around X-axis
         Rroll = cv2.Rodrigues(np.array([0., 0., roll * math.pi / 180]))[0]  # Roll around Z-axis again (???)
@@ -89,37 +89,37 @@ class CameraModel:
     #######################
 
     def wordlPoint_2_tex(self, pWorld):
-        bCamera = self._worldPoint_2_camera(pWorld) # 3D world -> 3D camera
-        pNorm = self._camera_2_normalized(bCamera)
-        pTex = self._normalized_2_tex(pNorm)
+        bCamera = self.__worldPoint_2_camera(pWorld) # 3D world -> 3D camera
+        pNorm = self.__camera_2_normalized(bCamera)
+        pTex = self.__normalized_2_tex(pNorm)
         return pTex
 
     
     def worldBearing_2_tex(self, bWorld):
-        bCamera = self._worldBearing_2_camera(bWorld)
-        pNorm = self._camera_2_normalized(bCamera)
-        pTex = self._normalized_2_tex(pNorm)
+        bCamera = self.__worldBearing_2_camera(bWorld)
+        pNorm = self.__camera_2_normalized(bCamera)
+        pTex = self.__normalized_2_tex(pNorm)
         return pTex
 
     
     def field_2_tex(self, pField):
         # use Homography to transform field to normalized undistorted coordinates
-        homoField2NormUndist = self._getHomoField2NormUndist()
+        homoField2NormUndist = self.__getHomoField2NormUndist()
         bCamera = homoField2NormUndist.dot(np.array([pField[0], pField[1], 1.0]))
-        pNorm = self._camera_2_normalized(bCamera)
-        pTex = self._normalized_2_tex(pNorm)
+        pNorm = self.__camera_2_normalized(bCamera)
+        pTex = self.__normalized_2_tex(pNorm)
         return pTex
 
     
     def tex_2_wordlBearing(self, pTex):
-        bCamera = self._tex_2_camera(pTex)
-        bWorld = self._camera_2_world(bCamera)
+        bCamera = self.__tex_2_camera(pTex)
+        bWorld = self.__camera_2_world(bCamera)
         return bWorld
 
     
     def tex_2_field(self, pTex):
-        bCamera = self._tex_2_camera(pTex)
-        pField = self._camera_2_field(bCamera)
+        bCamera = self.__tex_2_camera(pTex)
+        pField = self.__camera_2_field(bCamera)
         return pField
 
     
@@ -198,26 +198,26 @@ class CameraModel:
 
         # perspective projection
         if self.m_projAndDistType == ProjectionDistortionType.perspectiveNone:
-            return self._tex_2_rawNorm(pTex)
+            return self.__tex_2_rawNorm(pTex)
 
         # cylindric projection
         elif self.m_projAndDistType == ProjectionDistortionType.cylindricNone:
-            cylindric = self._tex_2_rawNorm(pTex)
+            cylindric = self.__tex_2_rawNorm(pTex)
             return cu.fromCylindricToCartesianNormalized(cylindric)
             
         # espheric projection
         elif self.m_projAndDistType == ProjectionDistortionType.esphericNone:
-            espheric = self._tex_2_rawNorm(pTex)
+            espheric = self.__tex_2_rawNorm(pTex)
             return cu.fromEsphericToCartesianNormalized(espheric)
 
         # perspective projection + distortion (radial)
         elif self.m_projAndDistType == ProjectionDistortionType.perspectiveRadial:
-            pRadial = self._undistortPixelPointRadial(pTex)
+            pRadial = self.__undistortPixelPointRadial(pTex)
             return np.array([pRadial[0], pRadial[1], 1.0])
 
         # fisheye projection + distortion (fisheye)
         elif self.m_projAndDistType == ProjectionDistortionType.fisheyeRadial:
-            pFisheye = self._undistortPixelPointFisheye(pTex)
+            pFisheye = self.__undistortPixelPointFisheye(pTex)
             return np.array([pFisheye[0], pFisheye[1], 1.0])
 
         return np.array([]) # error return - empty array
@@ -228,7 +228,7 @@ class CameraModel:
 
 
     def __camera_2_field(self, bCamera):
-        homoNormUndist2Field = self._getHomoField2NormUndist().inv()
+        homoNormUndist2Field = self.__getHomoField2NormUndist().inv()
         pField = homoNormUndist2Field.dot(bCamera)
         return np.array([pField[0] / pField[2], pField[1] / pField[2]])
 
