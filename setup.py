@@ -11,8 +11,6 @@ setup(
     url='https://github.com/babutxa/PyxelSew',
     license='MIT',
     install_requires=[
-        'package1',
-        'package2',
         # Add dependencies required by your module
     ],
 )
