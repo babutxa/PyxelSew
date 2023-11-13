@@ -75,13 +75,27 @@ class TestCameraModel(unittest.TestCase):
                                [3.08312438e-04,  3.10215651e-02,  3.72318335e+01]])
         self.assertTrue(np.allclose(self.camera_model.getHomoField2NormUndist(), expected_H))
 
+    def test_tex_2_normalized_2_tex(self):
+        # test the tex_2_normalized and normalized_2_tex methods
+        pTex = np.array([0.1, 0.2])
+        pRawNorm = self.camera_model._tex_2_rawNorm(pTex)
+        pNorm = np.array([pRawNorm[0] / pRawNorm[2], pRawNorm[1] / pRawNorm[2]])
+        pTex2 = self.camera_model._normalized_2_tex(pNorm)
+        self.assertTrue(np.allclose(pTex, pTex2))
+
+    def test_tex_2_camera_2_tex(self):
+        # test the tex_2_worldBearing and worldBearing_2_tex methods
+        pTex = np.array([0.1, 0.2])
+        bCamera = self.camera_model._tex_2_camera(pTex)
+        pNorm = self.camera_model._camera_2_normalized(bCamera)
+        pTex2 = self.camera_model._normalized_2_tex(pNorm)
+        self.assertTrue(np.allclose(pTex, pTex2))
+
     def test_field_2_tex_2_field(self):
         # test the field_2_tex and tex_2_field methods
         pField = np.array([5.1, 3.2])
         pTex = self.camera_model.field_2_tex(pField)
         pField2 = self.camera_model.tex_2_field(pTex)
-        print("pField: ", pField)
-        print("pField2: ", pField2)
         self.assertTrue(np.allclose(pField, pField2))
     
     
@@ -90,8 +104,6 @@ class TestCameraModel(unittest.TestCase):
         pTex = np.array([0.1, 0.2])
         pField = self.camera_model.tex_2_field(pTex)
         pTex2 = self.camera_model.field_2_tex(pField) 
-        print("pTex: ", pTex)
-        print("pTex2: ", pTex2)
         self.assertTrue(np.allclose(pTex, pTex2))
 
 
