@@ -68,6 +68,48 @@ class TestCameraModel(unittest.TestCase):
         self.camera_model.setC(new_C)
         self.assertTrue(np.allclose(self.camera_model.getC(), new_C))
 
+    def test_getHomoField2NormUndist(self):
+        # test the getK method
+        expected_H = np.array([[9.99825857e-01, -1.86596548e-02,  2.65603529e+01],
+                               [1.86590715e-02,  9.99344525e-01, -9.77563090e+00],
+                               [3.08312438e-04,  3.10215651e-02,  3.72318335e+01]])
+        self.assertTrue(np.allclose(self.camera_model.getHomoField2NormUndist(), expected_H))
+
+    def test_field_2_tex_2_field(self):
+        # test the field_2_tex and tex_2_field methods
+        pField = np.array([5.1, 3.2])
+        pTex = self.camera_model.field_2_tex(pField)
+        pField2 = self.camera_model.tex_2_field(pTex)
+        print("pField: ", pField)
+        print("pField2: ", pField2)
+        self.assertTrue(np.allclose(pField, pField2))
+    
+    
+    def test_tex_2_field_2_tex(self):
+        # test the field_2_tex and tex_2_field methods
+        pTex = np.array([0.1, 0.2])
+        pField = self.camera_model.tex_2_field(pTex)
+        pTex2 = self.camera_model.field_2_tex(pField) 
+        print("pTex: ", pTex)
+        print("pTex2: ", pTex2)
+        self.assertTrue(np.allclose(pTex, pTex2))
+
+
+    def test_wordlPoint_2_tex(self):
+        # TODOalba test the wordlPoint_2_tex method
+        return True
+    
+
+    def test_worldBearing_2_tex(self):
+        # TODOalba test the worldBearing_2_tex method
+        return True
+    
+
+    def test_tex_2_wordlBearing(self): 
+        # TODOalba test the tex_2_wordlBearing method
+        return True
+    
+
     def test_worldPoint_2_worldBearing(self):
         # test the worldPoint_2_worldBearing method
         pWorld0 = np.array([0.0, 0.0, 0.0])

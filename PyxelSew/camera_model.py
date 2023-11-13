@@ -104,7 +104,7 @@ class CameraModel:
     
     def field_2_tex(self, pField):
         # use Homography to transform field to normalized undistorted coordinates
-        homoField2NormUndist = self.__getHomoField2NormUndist()
+        homoField2NormUndist = self.getHomoField2NormUndist()
         bCamera = homoField2NormUndist.dot(np.array([pField[0], pField[1], 1.0]))
         pNorm = self.__camera_2_normalized(bCamera)
         pTex = self.__normalized_2_tex(pNorm)
@@ -146,19 +146,19 @@ class CameraModel:
         k4 = self.m_distortion[dParam.K4.value]
 
         # perspective projection
-        if self.m_projAndDistType == ProjectionDistortionType.perspectiveNone:
+        if self.m_projAndDistType == ProjectionDistortionType.perspectiveNone.value:
             return np.array([bCamera[0] / bCamera[2], bCamera[1] / bCamera[2]])
 
         # cylindric projection
-        elif self.m_projAndDistType == ProjectionDistortionType.cylindricNone:
+        elif self.m_projAndDistType == ProjectionDistortionType.cylindricNone.value:
             return cu.fromCartesianToCylindric(bCamera)
             
         # espheric projection
-        elif self.m_projAndDistType == ProjectionDistortionType.esphericNone:
+        elif self.m_projAndDistType == ProjectionDistortionType.esphericNone.value:
             return cu.fromCartesianToEspheric(bCamera)
 
         # perspective projection + distortion
-        elif self.m_projAndDistType == ProjectionDistortionType.perspectiveRadial:     
+        elif self.m_projAndDistType == ProjectionDistortionType.perspectiveRadial.value:
             pNorm = np.array([bCamera[0] / bCamera[2], bCamera[1] / bCamera[2]])
             r2 = pNorm @ pNorm
             if r2 > k4:
@@ -189,7 +189,7 @@ class CameraModel:
     
     
     def __normalized_2_tex(self, pNorm):
-        texP = self.getK().dot(np.array([pNorm[0], pNorm[1], 1.0]))
+        texP = self.getK().dot(np.array([[pNorm[0]], [pNorm[1]], [1.0]]))
         return np.array([texP[0] / texP[2], texP[1] / texP[2]])
 
     
@@ -197,26 +197,26 @@ class CameraModel:
         # note: this function returns a bearing in camera coordinates (bCamera)
 
         # perspective projection
-        if self.m_projAndDistType == ProjectionDistortionType.perspectiveNone:
+        if self.m_projAndDistType == ProjectionDistortionType.perspectiveNone.value:
             return self.__tex_2_rawNorm(pTex)
 
         # cylindric projection
-        elif self.m_projAndDistType == ProjectionDistortionType.cylindricNone:
+        elif self.m_projAndDistType == ProjectionDistortionType.cylindricNone.value:
             cylindric = self.__tex_2_rawNorm(pTex)
             return cu.fromCylindricToCartesianNormalized(cylindric)
             
         # espheric projection
-        elif self.m_projAndDistType == ProjectionDistortionType.esphericNone:
+        elif self.m_projAndDistType == ProjectionDistortionType.esphericNone.value:
             espheric = self.__tex_2_rawNorm(pTex)
             return cu.fromEsphericToCartesianNormalized(espheric)
 
         # perspective projection + distortion (radial)
-        elif self.m_projAndDistType == ProjectionDistortionType.perspectiveRadial:
+        elif self.m_projAndDistType == ProjectionDistortionType.perspectiveRadial.value:
             pRadial = self.__undistortPixelPointRadial(pTex)
             return np.array([pRadial[0], pRadial[1], 1.0])
 
         # fisheye projection + distortion (fisheye)
-        elif self.m_projAndDistType == ProjectionDistortionType.fisheyeRadial:
+        elif self.m_projAndDistType == ProjectionDistortionType.fisheyeRadial.value:
             pFisheye = self.__undistortPixelPointFisheye(pTex)
             return np.array([pFisheye[0], pFisheye[1], 1.0])
 
@@ -224,17 +224,18 @@ class CameraModel:
 
 
     def __camera_2_world(self, bCamera):
-        return self.getR().inv().dot(bCamera)
+        Rinv = np.transpose(self.getR())
+        return Rinv.dot(bCamera)
 
 
     def __camera_2_field(self, bCamera):
-        homoNormUndist2Field = self.__getHomoField2NormUndist().inv()
+        homoNormUndist2Field = np.linalg.inv(self.getHomoField2NormUndist())
         pField = homoNormUndist2Field.dot(bCamera)
         return np.array([pField[0] / pField[2], pField[1] / pField[2]])
 
 
     def __tex_2_rawNorm(self, pTex):
-        Kinv = self.getK().inv()
+        Kinv = np.linalg.inv(self.getK())
         return Kinv.dot(np.array([pTex[0], pTex[1], 1.0]))
 
 
@@ -245,9 +246,10 @@ class CameraModel:
         p2 = self.m_distortion[dParam.P2.value]
         k3 = self.m_distortion[dParam.K3.value]
         distCoeffs = np.array([k1, k2, p1,  p2, k3], dtype=np.float64)
-        distorted_points = np.array([[[pTexDist[0], pTexDist[1]]]])
+        print("distCoeffs: ", distCoeffs)
+        distorted_points = np.array([pTexDist], dtype=np.float64).reshape(1, 1, 2)
         undistorted_points = cv2.undistortPoints(distorted_points, self.getK(), distCoeffs, None, np.eye(3))
-        return np.array([undistorted_points[0,0], undistorted_points[0,1]])
+        return undistorted_points[0,0]
 
 
     def __undistortPixelPointFisheye(self, pTexDist):
@@ -256,12 +258,12 @@ class CameraModel:
         k3 = self.m_distortion[dParam.K3.value]
         k4 = self.m_distortion[dParam.K4.value]
         distCoeffs = np.array([k1, k2, k3, k4], dtype=np.float64)               
-        distorted_points = np.array([[[pTexDist[0], pTexDist[1]]]])
+        distorted_points = np.array([pTexDist], dtype=np.float64).reshape(1, 1, 2)
         undistorted_points = cv2.fisheye.undistortPoints(distorted_points, self.getK(), distCoeffs, None, np.eye(3))
-        return np.array([undistorted_points[0,0], undistorted_points[0,1]])
+        return undistorted_points[0,0]
     
 
-    def __getHomoField2NormUndist(self):
+    def getHomoField2NormUndist(self):
         # Homography to transform field to normalized 'undistorted' coordinates.
         # This homography is valid for all types of cameras, not only the pinhole ones.
         homoField2NormUndist = self.getR()
